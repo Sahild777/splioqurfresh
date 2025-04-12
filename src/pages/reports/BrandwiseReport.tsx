@@ -360,14 +360,14 @@ const PDFDocument = ({ barName, date, reportData }: { barName: string, date: str
             </View>
             <View style={[styles.tableCell, { width: '18.25%', flexDirection: 'row' }]}>
               {renderSizeColumns(totals.sales, activeSizes, 'total-sales')}
-      </View>
+            </View>
             <View style={[styles.tableCell, { width: '18.25%', flexDirection: 'row' }]}>
               {renderSizeColumns(totals.closing, activeSizes, 'total-closing')}
+            </View>
+          </View>
+        </View>
       </View>
-      </View>
-      </View>
-    </View>
-  );
+    );
   };
 
   return (
@@ -407,12 +407,18 @@ export default function BrandwiseReport() {
     try {
       setLoading(true);
 
-      // Fetch opening stock with category
-      const { data: openingData, error: openingError } = await supabase
+      // Calculate previous date
+      const currentDate = new Date(date);
+      const previousDate = new Date(currentDate);
+      previousDate.setDate(previousDate.getDate() - 1);
+      const previousDateStr = previousDate.toISOString().split('T')[0];
+
+      // Fetch previous day's closing stock
+      const { data: previousDayData, error: previousDayError } = await supabase
         .from('inventory')
         .select(`
           brand_id,
-          opening_qty,
+          closing_qty,
           brands (
             id,
             brand_name,
@@ -422,11 +428,11 @@ export default function BrandwiseReport() {
           )
         `)
         .eq('bar_id', selectedBar?.id)
-        .eq('date', date);
+        .eq('date', previousDateStr);
 
-      if (openingError) {
-        console.error('Opening stock error:', openingError);
-        throw openingError;
+      if (previousDayError) {
+        console.error('Previous day data error:', previousDayError);
+        throw previousDayError;
       }
 
       // Fetch received stock (TP entries) with category and TP numbers
@@ -435,12 +441,14 @@ export default function BrandwiseReport() {
         .select(`
           brand_id,
           qty,
+          created_at,
           brands (
             id,
             category
           ),
           transport_permits (
-            tp_no
+            tp_no,
+            tp_date
           )
         `)
         .eq('transport_permits.bar_id', selectedBar?.id)
@@ -471,28 +479,35 @@ export default function BrandwiseReport() {
       }
 
       // Process and combine the data
-      const processedData: BrandReport[] = openingData.map((opening: any) => {
-        const received = receivedData?.filter((r: any) => r.brand_id === opening.brand_id) || [];
-        const sales = salesData?.filter((s: any) => s.brand_id === opening.brand_id) || [];
+      const processedData: BrandReport[] = previousDayData.map((previous: any) => {
+        // Filter received items to only include those created on the selected date
+        const received = receivedData?.filter((r: any) => {
+          const tpDate = new Date(r.transport_permits?.tp_date);
+          const selectedDate = new Date(date);
+          return r.brand_id === previous.brand_id && 
+                 tpDate.toDateString() === selectedDate.toDateString();
+        }) || [];
+
+        const sales = salesData?.filter((s: any) => s.brand_id === previous.brand_id) || [];
 
         const receivedQty = received.reduce((sum: number, item: any) => sum + (item.qty || 0), 0);
         const salesQty = sales.reduce((sum: number, item: any) => sum + (item.qty || 0), 0);
 
-        // Get unique TP numbers for this brand
+        // Get TP numbers only for the selected date
         const tpNumbers = [...new Set(received
           .map((r: any) => r.transport_permits?.tp_no)
           .filter((n: string | null) => n !== null && n !== undefined)
         )];
 
         return {
-          brand_name: opening.brands?.brand_name || '',
-          item_code: opening.brands?.item_code || '',
-          sizes: opening.brands?.sizes || '',
-          category: opening.brands?.category || '',
-          opening: { [opening.brands?.sizes || '']: opening.opening_qty || 0 },
-          received: { [opening.brands?.sizes || '']: receivedQty },
-          sales: { [opening.brands?.sizes || '']: salesQty },
-          closing: { [opening.brands?.sizes || '']: (opening.opening_qty || 0) + receivedQty - salesQty },
+          brand_name: previous.brands?.brand_name || '',
+          item_code: previous.brands?.item_code || '',
+          sizes: previous.brands?.sizes || '',
+          category: previous.brands?.category || '',
+          opening: { [previous.brands?.sizes || '']: previous.closing_qty || 0 }, // Use previous day's closing as today's opening
+          received: { [previous.brands?.sizes || '']: receivedQty },
+          sales: { [previous.brands?.sizes || '']: salesQty },
+          closing: { [previous.brands?.sizes || '']: (previous.closing_qty || 0) + receivedQty - salesQty },
           tp_numbers: tpNumbers
         };
       });
