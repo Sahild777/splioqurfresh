@@ -415,13 +415,6 @@ export default function EnterTP() {
     setIsLoading(true);
 
     try {
-      // Get the current user's ID
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
-      if (!user) throw new Error('User not authenticated');
-
-      console.log('User authenticated:', user.id);
-
       // Check if TP number already exists for this bar
       const { data: existingTP, error: checkError } = await supabase
         .from('transport_permits')
@@ -454,10 +447,10 @@ export default function EnterTP() {
         party_id: selectedParty.id,
         tp_date: tpDate,
         bar_id: selectedBar.id,
-        created_by: user.id
+        created_by: null  // Explicitly set to null since it's optional now
       });
 
-      // First attempt to insert TP without requiring the data back
+      // Insert TP without requiring authentication
       const { data: insertedTP, error: insertError } = await supabase
         .from('transport_permits')
         .insert([
@@ -466,7 +459,7 @@ export default function EnterTP() {
             party_id: selectedParty.id,
             tp_date: tpDate,
             bar_id: selectedBar.id,
-            created_by: user.id
+            created_by: null  // Explicitly set to null since it's optional now
           }
         ])
         .select()
@@ -477,34 +470,14 @@ export default function EnterTP() {
         throw new Error(`Failed to create transport permit: ${insertError.message}`);
       }
 
-      // Now fetch the inserted TP using the TP number and bar_id
-      const { data: fetchedTP, error: fetchError } = await supabase
-        .from('transport_permits')
-        .select('id')
-        .eq('tp_no', tpNo)
-        .eq('bar_id', selectedBar.id)
-        .single();
-
-      if (fetchError) {
-        console.error('Error fetching inserted transport permit:', fetchError);
-        throw new Error(`Failed to retrieve the created transport permit: ${fetchError.message}`);
-      }
-
-      if (!fetchedTP) {
-        throw new Error('Transport permit was created but could not be retrieved');
-      }
-
-      console.log('Transport permit created successfully:', fetchedTP);
-
-      // Prepare TP items with the required fields
+      // Prepare TP items
       const tpItems = validItems.map(item => ({
-        tp_id: Number(fetchedTP.id),
+        tp_id: Number(insertedTP.id),
         brand_id: Number(item.brand_id),
-        qty: Number(item.qty),
-        bar_id: selectedBar.id  // Include bar_id
+        qty: Number(item.qty)
       }));
 
-      console.log('Saving TP items (with bar_id):', tpItems);
+      console.log('Saving TP items:', tpItems);
 
       // Insert TP items
       const { error: itemsError } = await supabase
@@ -514,7 +487,7 @@ export default function EnterTP() {
       if (itemsError) {
         console.error('Error inserting TP items:', itemsError);
         // Try to delete the TP if items couldn't be saved
-        await supabase.from('transport_permits').delete().eq('id', fetchedTP.id);
+        await supabase.from('transport_permits').delete().eq('id', insertedTP.id);
         throw new Error(`Failed to save TP items: ${itemsError.message}`);
       }
 
@@ -522,7 +495,7 @@ export default function EnterTP() {
       const { data: savedItems, error: fetchItemsError } = await supabase
         .from('tp_items')
         .select('*')
-        .eq('tp_id', fetchedTP.id);
+        .eq('tp_id', insertedTP.id);
 
       if (fetchItemsError) {
         console.error('Error fetching inserted items:', fetchItemsError);

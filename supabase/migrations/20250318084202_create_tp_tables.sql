@@ -5,7 +5,7 @@ CREATE TABLE transport_permits (
     party_id UUID NOT NULL REFERENCES parties(id),
     bar_id UUID NOT NULL REFERENCES bars(id),
     tp_date DATE NOT NULL,
-    created_by UUID NOT NULL REFERENCES auth.users(id),
+    created_by UUID REFERENCES auth.users(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     UNIQUE(tp_no, bar_id)
@@ -35,71 +35,16 @@ CREATE INDEX idx_tp_items_brand_id ON tp_items(brand_id);
 ALTER TABLE transport_permits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tp_items ENABLE ROW LEVEL SECURITY;
 
--- Create policies for transport_permits
-CREATE POLICY "Users can view their own transport permits"
-    ON transport_permits FOR SELECT
-    USING (auth.uid() = created_by);
+-- Create public access policies
+CREATE POLICY "Public access to transport permits"
+    ON transport_permits FOR ALL
+    USING (true)
+    WITH CHECK (true);
 
-CREATE POLICY "Users can insert their own transport permits"
-    ON transport_permits FOR INSERT
-    WITH CHECK (auth.uid() = created_by);
-
-CREATE POLICY "Users can update their own transport permits"
-    ON transport_permits FOR UPDATE
-    USING (auth.uid() = created_by)
-    WITH CHECK (auth.uid() = created_by);
-
-CREATE POLICY "Users can delete their own transport permits"
-    ON transport_permits FOR DELETE
-    USING (auth.uid() = created_by);
-
--- Create policies for tp_items
-CREATE POLICY "Users can view their own tp items"
-    ON tp_items FOR SELECT
-    USING (
-        EXISTS (
-            SELECT 1 FROM transport_permits
-            WHERE transport_permits.id = tp_items.tp_id
-            AND transport_permits.created_by = auth.uid()
-        )
-    );
-
-CREATE POLICY "Users can insert their own tp items"
-    ON tp_items FOR INSERT
-    WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM transport_permits
-            WHERE transport_permits.id = tp_items.tp_id
-            AND transport_permits.created_by = auth.uid()
-        )
-    );
-
-CREATE POLICY "Users can update their own tp items"
-    ON tp_items FOR UPDATE
-    USING (
-        EXISTS (
-            SELECT 1 FROM transport_permits
-            WHERE transport_permits.id = tp_items.tp_id
-            AND transport_permits.created_by = auth.uid()
-        )
-    )
-    WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM transport_permits
-            WHERE transport_permits.id = tp_items.tp_id
-            AND transport_permits.created_by = auth.uid()
-        )
-    );
-
-CREATE POLICY "Users can delete their own tp items"
-    ON tp_items FOR DELETE
-    USING (
-        EXISTS (
-            SELECT 1 FROM transport_permits
-            WHERE transport_permits.id = tp_items.tp_id
-            AND transport_permits.created_by = auth.uid()
-        )
-    );
+CREATE POLICY "Public access to tp items"
+    ON tp_items FOR ALL
+    USING (true)
+    WITH CHECK (true);
 
 -- Create function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()

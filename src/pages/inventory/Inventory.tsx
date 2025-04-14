@@ -293,26 +293,6 @@ export default function Inventory() {
 
     const saveTimeout = setTimeout(async () => {
       try {
-        // Get current user
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          console.error('User not authenticated');
-          return;
-        }
-
-        // Check user access
-        const { data: barAccess, error: accessError } = await supabase
-          .from('bar_users')
-          .select('id')
-          .eq('bar_id', selectedBar.id)
-          .eq('user_id', user.id)
-          .single();
-
-        if (accessError || !barAccess) {
-          console.error('No bar access');
-          return;
-        }
-
         // Delete existing inventory for the date
         await supabase
           .from('inventory')
@@ -329,8 +309,7 @@ export default function Inventory() {
             opening_qty: item.opening_qty,
             receipt_qty: item.receipt_qty,
             sale_qty: item.sale_qty,
-            closing_qty: item.closing_qty,
-            created_by: user.id
+            closing_qty: item.closing_qty
           }))
         );
 
@@ -345,8 +324,7 @@ export default function Inventory() {
           opening_qty: item.closing_qty,
           receipt_qty: 0,
           sale_qty: 0,
-          closing_qty: item.closing_qty,
-          created_by: user.id
+          closing_qty: item.closing_qty
         }));
 
         // Delete any existing next day inventory
@@ -449,26 +427,6 @@ export default function Inventory() {
 
     setAutoSaving(true);
     try {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error('User not authenticated');
-        return;
-      }
-
-      // Check user access
-      const { data: barAccess, error: accessError } = await supabase
-        .from('bar_users')
-        .select('id')
-        .eq('bar_id', selectedBar.id)
-        .eq('user_id', user.id)
-        .single();
-
-      if (accessError || !barAccess) {
-        toast.error('You do not have access to this bar');
-        return;
-      }
-
       const startDate = parseISO(date);
       const currentDate = new Date();
 
@@ -523,14 +481,13 @@ export default function Inventory() {
           const receipt_qty = receiptQtys.get(brandId) || 0;
           const sale_qty = saleQtys.get(brandId) || 0;
           return {
-          bar_id: selectedBar.id,
+            bar_id: selectedBar.id,
             brand_id: brandId,
-          date: currentDateStr,
+            date: currentDateStr,
             opening_qty,
             receipt_qty,
             sale_qty,
-            closing_qty: opening_qty + receipt_qty - sale_qty,
-          created_by: user.id
+            closing_qty: opening_qty + receipt_qty - sale_qty
           };
         });
 
@@ -585,187 +542,34 @@ export default function Inventory() {
     setLoading(true);
     
     try {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.error('User not authenticated');
-        return;
-      }
-
       const startDate = parseISO(date);
       const currentDate = new Date();
       let currentDateToProcess = startDate;
 
       // Get the brand details
       const brand = inventory.find(item => item.brand_id === brandId);
-      if (!brand) return;
 
-      // Update the current day's inventory first
-      let updatedInventory = inventory.map(item => 
-        item.brand_id === brandId 
-          ? { 
-              ...item, 
-              [field]: qty,
-              closing_qty: calculateClosingQty(item, field, qty)
-            } 
-          : item
-      );
-      setInventory(updatedInventory);
-
-      // Get the updated brand data
-      const updatedBrand = updatedInventory.find(item => item.brand_id === brandId);
-      if (!updatedBrand) return;
-
-      // Initialize with the current day's values
-      let currentOpeningQty = updatedBrand.opening_qty;
-      let currentClosingQty = updatedBrand.closing_qty;
-      let hasError = false;
-
-      // Process updates in batches of 30 days
-      const batchSize = 30;
-      let processedDates = 0;
-
-      // First, update the selected date
-      const { error: initialError } = await supabase
-        .from('inventory')
-        .upsert({
-          bar_id: selectedBar.id,
-          brand_id: brandId,
-          date: format(currentDateToProcess, 'yyyy-MM-dd'),
-          opening_qty: currentOpeningQty,
-          receipt_qty: updatedBrand.receipt_qty,
-          sale_qty: updatedBrand.sale_qty,
-          closing_qty: currentClosingQty,
-          created_by: user.id
-        }, {
-          onConflict: 'bar_id,brand_id,date'
-        });
-
-      if (initialError) {
-        console.error('Error updating initial inventory:', initialError);
-        hasError = true;
+      if (!brand) {
+        throw new Error('Brand not found');
       }
 
-      // Move to next day for future updates
-      currentDateToProcess = addDays(currentDateToProcess, 1);
-      currentOpeningQty = currentClosingQty;
-
-      // Update all future dates until current date
-      while (isBefore(currentDateToProcess, currentDate) && !hasError) {
-        const batchUpdates = [];
-        let batchEndDate = currentDateToProcess;
-
-        // Process a batch of dates
-        for (let i = 0; i < batchSize && isBefore(batchEndDate, currentDate); i++) {
-          const currentDateStr = format(batchEndDate, 'yyyy-MM-dd');
-          
-          // Fetch TP entries and daily sales for this brand on current date
-          const [receiptQtys, saleQtys] = await Promise.all([
-            fetchTPEntries(currentDateStr),
-            fetchDailySales(currentDateStr)
-          ]);
-
-          const receipt_qty = receiptQtys.get(brandId) || 0;
-          const sale_qty = saleQtys.get(brandId) || 0;
-          const closing_qty = currentOpeningQty + receipt_qty - sale_qty;
-
-          console.log(`Updating ${brand.brand_name} for ${currentDateStr}:`, {
-            opening: currentOpeningQty,
-            receipt: receipt_qty,
-            sale: sale_qty,
-            closing: closing_qty
-          });
-
-          // Add to batch updates
-          batchUpdates.push({
-            bar_id: selectedBar.id,
-            brand_id: brandId,
-            date: currentDateStr,
-            opening_qty: currentOpeningQty,
-            receipt_qty,
-            sale_qty,
-            closing_qty,
-            created_by: user.id
-          });
-
-          // Set next day's opening qty to today's closing qty
-          currentOpeningQty = closing_qty;
-          batchEndDate = addDays(batchEndDate, 1);
-          processedDates++;
-        }
-
-        // Upsert batch of inventory entries
-        if (batchUpdates.length > 0) {
-          const { error: batchError } = await supabase
-            .from('inventory')
-            .upsert(batchUpdates, {
-              onConflict: 'bar_id,brand_id,date'
-            });
-
-          if (batchError) {
-            console.error(`Error updating inventory batch:`, batchError);
-            hasError = true;
-            break;
+      // Update the inventory state
+      setInventory(prevInventory => {
+        return prevInventory.map(item => {
+          if (item.brand_id === brandId) {
+            const updatedItem = { ...item, [field]: qty };
+            updatedItem.closing_qty = updatedItem.opening_qty + updatedItem.receipt_qty - updatedItem.sale_qty;
+            return updatedItem;
           }
-        }
-
-        // Update currentDateToProcess for next batch
-        currentDateToProcess = batchEndDate;
-
-        // Show progress
-        toast.success(`Updated ${processedDates} days of inventory for ${brand.brand_name}`, {
-          duration: 2000
+          return item;
         });
-      }
+      });
 
-      // Also update the current date with the final opening quantity
-      if (!hasError) {
-        const currentDateStr = format(currentDate, 'yyyy-MM-dd');
-        await supabase
-          .from('inventory')
-          .upsert({
-            bar_id: selectedBar.id,
-            brand_id: brandId,
-            date: currentDateStr,
-            opening_qty: currentOpeningQty,
-            receipt_qty: 0,
-            sale_qty: 0,
-            closing_qty: currentOpeningQty,
-            created_by: user.id
-          }, {
-            onConflict: 'bar_id,brand_id,date'
-          });
-      }
-
-      // Refresh the inventory display
-      await initializeData();
-
-      if (!hasError) {
-        toast.success(`Completed inventory update for ${brand.brand_name}`);
-      }
     } catch (error) {
-      console.error('Error updating inventory:', error);
-      toast.error('Failed to update inventory');
+      console.error('Error updating quantity:', error);
+      toast.error('Failed to update quantity');
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Helper function to calculate closing quantity
-  const calculateClosingQty = (
-    item: InventoryItem, 
-    field: 'receipt_qty' | 'sale_qty' | 'opening_qty', 
-    newValue: number
-  ): number => {
-    switch (field) {
-      case 'opening_qty':
-        return newValue + item.receipt_qty - item.sale_qty;
-      case 'receipt_qty':
-        return item.opening_qty + newValue - item.sale_qty;
-      case 'sale_qty':
-        return item.opening_qty + item.receipt_qty - newValue;
-      default:
-        return item.closing_qty;
     }
   };
 

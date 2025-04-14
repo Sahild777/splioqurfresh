@@ -157,74 +157,62 @@ export default function Shortcut() {
       }
 
       // Find all brands with the same name
-      const { data: similarBrands, error: brandsError } = await supabase
+      const { data: similarBrands } = await supabase
         .from('brands')
         .select('id, brand_name')
-        .eq('brand_name', selectedBrand.brand_name) as { data: DatabaseBrand[] | null, error: any };
+        .eq('brand_name', selectedBrand.brand_name);
 
-      if (brandsError || !similarBrands || similarBrands.length === 0) {
+      if (!similarBrands || similarBrands.length === 0) {
         toast.error('Failed to find brands');
         return;
       }
 
-      // Check if any of these brands already have shortcuts
-      const { data: existingBrandShortcuts } = await supabase
+      // Check if any of these brands already have a shortcut
+      const { data: existingShortcuts } = await supabase
         .from('shortcuts')
-        .select('brand_id')
+        .select('shortform, brand_id')
         .in('brand_id', similarBrands.map(b => b.id));
 
-      // Filter out brands that already have shortcuts
+      let shortformToUse = formData.shortform.toUpperCase();
+
+      // If any similar brand has a shortcut, use that shortform
+      if (existingShortcuts && existingShortcuts.length > 0) {
+        shortformToUse = existingShortcuts[0].shortform;
+      }
+
+      // Get brands that don't have shortcuts yet
       const brandsToAdd = similarBrands.filter(brand => 
-        !existingBrandShortcuts?.some(shortcut => shortcut.brand_id === brand.id)
+        !existingShortcuts?.some(shortcut => shortcut.brand_id === brand.id)
       );
 
       if (brandsToAdd.length === 0) {
-        toast.error('All brands with this name already have shortcuts');
+        toast.success('All similar brands already have shortcuts');
         return;
       }
 
-      // Insert shortcuts for all similar brands with numbered suffixes
-      const baseShortform = formData.shortform.toUpperCase();
-      const insertPromises = brandsToAdd.map(async (brand, index) => {
-        const shortform = index === 0 ? baseShortform : `${baseShortform}${index + 1}`;
-        
-        // Check if this specific shortform exists
-        const { data: existingShortform } = await supabase
-          .from('shortcuts')
-          .select('id')
-          .eq('shortform', shortform)
-          .single();
-
-        if (existingShortform) {
-          return { error: `Shortform ${shortform} already exists` };
-        }
-
-        // Insert the new shortform
-        const { error } = await supabase
-          .from('shortcuts')
-          .insert({
-            shortform: shortform,
+      // Insert shortcuts for all brands without one
+      const { error: insertError } = await supabase
+        .from('shortcuts')
+        .insert(
+          brandsToAdd.map(brand => ({
+            shortform: shortformToUse,
             brand_id: brand.id
-          });
+          }))
+        );
 
-        return { error };
-      });
-
-      const results = await Promise.all(insertPromises);
-      const errors = results.filter(r => r.error);
-
-      if (errors.length > 0) {
-        toast.error(`Some shortcuts could not be added: ${errors.map(e => e.error).join(', ')}`);
-      } else {
-        toast.success(`Shortcut added successfully for ${brandsToAdd.length} brand(s)`);
+      if (insertError) {
+        console.error('Error adding shortcuts:', insertError);
+        toast.error('Failed to add shortcuts');
+        return;
       }
 
+      toast.success(`Added shortcuts for ${brandsToAdd.length} brand(s)`);
       setFormData({ shortform: '', brand_id: '', brand_name: '' });
       setShowAddForm(false);
       fetchShortcuts();
     } catch (error: any) {
-      toast.error('Failed to add shortcut');
-      console.error('Error adding shortcut:', error);
+      console.error('Error adding shortcuts:', error);
+      toast.error('Failed to add shortcuts');
     } finally {
       setIsLoading(false);
     }

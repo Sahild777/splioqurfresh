@@ -6,6 +6,7 @@ type Bar = {
   bar_name: string;
   financial_year_start: string;
   license_category: 'bar' | 'beer_shop' | 'wine_shop';
+  license_number: string;
 };
 
 type BarContextType = {

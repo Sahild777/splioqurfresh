@@ -12,27 +12,16 @@ CREATE TABLE shortcuts (
 -- Add RLS policies
 ALTER TABLE shortcuts ENABLE ROW LEVEL SECURITY;
 
--- Create policies
-CREATE POLICY "Enable read access for authenticated users" ON shortcuts
-    FOR SELECT
-    TO authenticated
-    USING (true);
+-- Create open access policy
+DROP POLICY IF EXISTS "Enable read access for authenticated users" ON shortcuts;
+DROP POLICY IF EXISTS "Enable insert access for authenticated users" ON shortcuts;
+DROP POLICY IF EXISTS "Enable update access for authenticated users" ON shortcuts;
+DROP POLICY IF EXISTS "Enable delete access for authenticated users" ON shortcuts;
 
-CREATE POLICY "Enable insert access for authenticated users" ON shortcuts
-    FOR INSERT
-    TO authenticated
-    WITH CHECK (true);
-
-CREATE POLICY "Enable update access for authenticated users" ON shortcuts
-    FOR UPDATE
-    TO authenticated
+CREATE POLICY "Allow all access to shortcuts"
+    ON shortcuts FOR ALL
     USING (true)
     WITH CHECK (true);
-
-CREATE POLICY "Enable delete access for authenticated users" ON shortcuts
-    FOR DELETE
-    TO authenticated
-    USING (true);
 
 -- Create updated_at function
 CREATE OR REPLACE FUNCTION set_updated_at()

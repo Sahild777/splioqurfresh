@@ -627,356 +627,391 @@ export default function DailySales() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {isEditMode ? 'Edit Sales' : 'Daily Sales'}
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Bar: {selectedBar?.bar_name}
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Date
-              </label>
-              <input
-                type="date"
-                value={saleDate}
-                onChange={(e) => setSaleDate(e.target.value)}
-                disabled={isEditMode}
-                className={`px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white ${
-                  isEditMode ? 'opacity-70 cursor-not-allowed' : ''
-                }`}
-              />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header Card */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+            <div className="flex-1">
+              <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
+                {isEditMode ? 'Edit Sales Entry' : 'Daily Sales Entry'}
+              </h1>
+              <div className="mt-2 flex items-center text-sm text-gray-600 dark:text-gray-400">
+                <div className="flex items-center">
+                  <span className="font-medium mr-2">Bar:</span>
+                  <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full">
+                    {selectedBar?.bar_name}
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="flex gap-2 mt-6">
-              {isEditMode && (
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div className="w-full sm:w-auto">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Sale Date
+                </label>
+                <input
+                  type="date"
+                  value={saleDate}
+                  onChange={(e) => setSaleDate(e.target.value)}
+                  disabled={isEditMode}
+                  className={`w-full sm:w-auto px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition-colors ${
+                    isEditMode ? 'opacity-70 cursor-not-allowed' : ''
+                  }`}
+                />
+              </div>
+              <div className="flex gap-3 sm:mt-6">
+                {isEditMode && (
+                  <button
+                    onClick={() => navigate('/sales/summary')}
+                    className="px-4 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                )}
                 <button
-                  onClick={() => navigate('/sales/summary')}
-                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                  onClick={handleSave}
+                  disabled={isLoading || isFetchingExistingSales}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2"
                 >
-                  Cancel
+                  {isLoading ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    'Save Sales'
+                  )}
                 </button>
-              )}
-            <button
-              onClick={handleSave}
-                disabled={isLoading || isFetchingExistingSales}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'Saving...' : 'Save Sales'}
-            </button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-      </div>
 
-      {/* Loading indicator for fetching existing sales */}
-      {isFetchingExistingSales && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6 text-center">
-          <p className="text-gray-600 dark:text-gray-400">Loading existing sales data...</p>
-        </div>
-      )}
+        {/* Loading State */}
+        {isFetchingExistingSales && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+            <div className="flex items-center justify-center">
+              <svg className="animate-spin h-5 w-5 text-blue-600 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span className="text-gray-600 dark:text-gray-400">Loading existing sales data...</span>
+            </div>
+          </div>
+        )}
 
-      {/* Sales Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Sr. No
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Item Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Item Code
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Size
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  MRP
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Available Stock
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Sale Qty
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {saleItems.map((item, index) => (
-                <tr 
-                  key={item.sr_no}
-                  className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${
-                    selectedRowIndex === index ? 'bg-blue-50 dark:bg-blue-900' : ''
-                  }`}
-                >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {item.sr_no}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={item.brand_name}
-                        readOnly
+        {/* Sales Table */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700/50">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-16">
+                    Sr. No
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Item Name
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Item Code
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Size
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    MRP
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Stock
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">
+                    Sale Qty
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                {saleItems.map((item, index) => (
+                  <tr 
+                    key={item.sr_no}
+                    className={`group hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${
+                      selectedRowIndex === index ? 'bg-blue-50/50 dark:bg-blue-900/20' : ''
+                    }`}
+                  >
+                    <td className="px-6 py-3 text-sm text-gray-900 dark:text-white">
+                      {item.sr_no}
+                    </td>
+                    <td className="px-6 py-3">
+                      <button
                         onClick={() => {
                           setSelectedRowIndex(index);
                           setShowBrandSearch(true);
                         }}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-pointer"
-                        placeholder="Click to search brand..."
+                        className="w-full text-left px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors group-hover:border-blue-500 dark:group-hover:border-blue-400"
+                      >
+                        {item.brand_name || 'Click to search brand...'}
+                      </button>
+                    </td>
+                    <td className="px-6 py-3">
+                      <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300">
+                        {item.item_code || '-'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-3">
+                      <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300">
+                        {item.sizes || '-'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-3">
+                      <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300">
+                        ₹{item.mrp || '0'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-3">
+                      <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300">
+                        {item.available_stock}
+                      </div>
+                    </td>
+                    <td className="px-6 py-3">
+                      <input
+                        type="number"
+                        value={item.qty}
+                        onChange={(e) => handleQtyChange(e.target.value, index)}
+                        onKeyDown={(e) => handleKeyDown(e, index)}
+                        className="w-full px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition-colors"
+                        min="1"
+                        max={item.available_stock}
                       />
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    <input
-                      type="text"
-                      value={item.item_code}
-                      readOnly
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-600 text-gray-500 dark:text-gray-400"
-                    />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    <input
-                      type="text"
-                      value={item.sizes}
-                      readOnly
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-600 text-gray-500 dark:text-gray-400"
-                    />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    <input
-                      type="text"
-                      value={item.mrp}
-                      readOnly
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-600 text-gray-500 dark:text-gray-400"
-                    />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    <input
-                      type="text"
-                      value={item.available_stock}
-                      readOnly
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-600 text-gray-500 dark:text-gray-400"
-                    />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    <input
-                      type="number"
-                      value={item.qty}
-                      onChange={(e) => handleQtyChange(e.target.value, index)}
-                      onKeyDown={(e) => handleKeyDown(e, index)}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                      min="1"
-                      max={item.available_stock}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
-      {/* Brand Search Modal */}
-      {showBrandSearch && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl mx-4">
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Search Brand {selectedBrands.length > 0 && `(${selectedBrands.length} selected)`}
-              </h2>
-              <button
-                onClick={() => {
-                  setShowBrandSearch(false);
-                  setSearchQuery('');
-                  setFilteredBrands([]);
-                  setSelectedBrands([]);
-                }}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => handleBrandSearch(e.target.value)}
-                  onKeyDown={handleSearchKeyDown}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                  placeholder="Search by brand name, code or shortcut..."
-                />
+        {/* Brand Search Modal */}
+        {showBrandSearch && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-3xl mx-4 overflow-hidden border border-gray-200 dark:border-gray-700">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    Search Brand
+                    {selectedBrands.length > 0 && (
+                      <span className="px-2.5 py-0.5 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-sm rounded-full">
+                        {selectedBrands.length} selected
+                      </span>
+                    )}
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setShowBrandSearch(false);
+                      setSearchQuery('');
+                      setFilteredBrands([]);
+                      setSelectedBrands([]);
+                    }}
+                    className="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="mt-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <input
+                      ref={searchInputRef}
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => handleBrandSearch(e.target.value)}
+                      onKeyDown={handleSearchKeyDown}
+                      className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition-colors"
+                      placeholder="Search by brand name, code or shortcut..."
+                    />
+                  </div>
+                </div>
               </div>
-              
+
               {selectedBrands.length > 0 && (
-                <div className="mt-4 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead className="bg-gray-50 dark:bg-gray-700">
-                      <tr>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          Selected Item
-                        </th>
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          Available
-                        </th>
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          Quantity
-                        </th>
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                      {selectedBrands.map((brand) => (
-                        <tr key={`selected-${brand.id}`}>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm">
-                            <div className="font-medium text-gray-900 dark:text-white">{brand.brand_name}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
-                              {brand.item_code} - {brand.sizes}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-500 dark:text-gray-400">
-                            {brand.closing_qty}
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm">
-                            <div className="flex items-center justify-center">
-                              <button
-                                onClick={() => decrementQty(brand.id)}
-                                disabled={brand.selectedQty <= 1}
-                                className="p-1 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 disabled:opacity-50"
-                              >
-                                <Minus className="w-4 h-4" />
-                              </button>
-                              <input
-                                ref={el => qtyInputRefs.current[brand.id] = el}
-                                type="number"
-                                min="1"
-                                max={brand.closing_qty}
-                                value={brand.selectedQty}
-                                onChange={(e) => updateSelectedBrandQty(brand.id, parseInt(e.target.value) || 1)}
-                                onKeyDown={(e) => {
-                                  // Add Enter key handling for faster input
-                                  if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    // If this is the last item, apply the selection
-                                    if (brand.id === selectedBrands[selectedBrands.length - 1].id) {
-                                      applyMultiSelection();
-                                    } else {
-                                      // Otherwise focus the next quantity input
-                                      const currentIndex = selectedBrands.findIndex(b => b.id === brand.id);
-                                      const nextBrand = selectedBrands[currentIndex + 1];
-                                      if (nextBrand) {
-                                        const nextInput = qtyInputRefs.current[nextBrand.id];
-                                        if (nextInput) {
-                                          nextInput.focus();
-                                          nextInput.select();
+                <div className="px-6 pt-4">
+                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                      <thead>
+                        <tr className="bg-gray-50 dark:bg-gray-700/50">
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Selected Item
+                          </th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Available
+                          </th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Quantity
+                          </th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-16">
+                            
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {selectedBrands.map((brand) => (
+                          <tr key={`selected-${brand.id}`} className="group">
+                            <td className="px-4 py-3">
+                              <div className="font-medium text-gray-900 dark:text-white">
+                                {brand.brand_name}
+                                {shortcuts[brand.id] && (
+                                  <span className="ml-2 px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs rounded-full">
+                                    {shortcuts[brand.id]}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-sm text-gray-500 dark:text-gray-400">
+                                {brand.item_code} - {brand.sizes}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400">
+                              {brand.closing_qty}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center justify-center">
+                                <button
+                                  onClick={() => decrementQty(brand.id)}
+                                  disabled={brand.selectedQty <= 1}
+                                  className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                  <Minus className="w-4 h-4" />
+                                </button>
+                                <input
+                                  ref={el => qtyInputRefs.current[brand.id] = el}
+                                  type="number"
+                                  min="1"
+                                  max={brand.closing_qty}
+                                  value={brand.selectedQty}
+                                  onChange={(e) => updateSelectedBrandQty(brand.id, parseInt(e.target.value) || 1)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      if (brand.id === selectedBrands[selectedBrands.length - 1].id) {
+                                        applyMultiSelection();
+                                      } else {
+                                        const currentIndex = selectedBrands.findIndex(b => b.id === brand.id);
+                                        const nextBrand = selectedBrands[currentIndex + 1];
+                                        if (nextBrand) {
+                                          const nextInput = qtyInputRefs.current[nextBrand.id];
+                                          if (nextInput) {
+                                            nextInput.focus();
+                                            nextInput.select();
+                                          }
                                         }
                                       }
                                     }
-                                  }
-                                }}
-                                className="w-12 mx-1 text-center px-2 py-1 border border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                              />
+                                  }}
+                                  className="w-16 mx-2 text-center px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors"
+                                />
+                                <button
+                                  onClick={() => incrementQty(brand.id)}
+                                  disabled={brand.selectedQty >= brand.closing_qty}
+                                  className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                  <Plus className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-center">
                               <button
-                                onClick={() => incrementQty(brand.id)}
-                                disabled={brand.selectedQty >= brand.closing_qty}
-                                className="p-1 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 disabled:opacity-50"
+                                onClick={() => setSelectedBrands(prev => prev.filter(item => item.id !== brand.id))}
+                                className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors opacity-0 group-hover:opacity-100"
                               >
-                                <Plus className="w-4 h-4" />
+                                <X className="w-4 h-4" />
                               </button>
-                            </div>
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-center">
-                            <button
-                              onClick={() => setSelectedBrands(prev => prev.filter(item => item.id !== brand.id))}
-                              className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
-              
-              <div ref={brandListRef} className="mt-4 max-h-96 overflow-y-auto">
-                {(searchQuery.trim() === '' ? brands : filteredBrands).map((brand, index) => (
-                  <div
-                    id={`brand-item-${index}`}
-                    key={brand.id}
-                    onClick={() => toggleBrandSelection(brand)}
-                    onDoubleClick={() => handleBrandDoubleClick(brand)}
-                    className={`flex items-center w-full text-left px-4 py-2 rounded-lg cursor-pointer ${
-                      selectedBrandIndex === index 
-                        ? 'bg-blue-100 dark:bg-blue-800' 
-                        : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    <div className={`w-5 h-5 mr-3 flex-shrink-0 border rounded ${
-                      selectedBrands.some(item => item.id === brand.id)
-                        ? 'bg-blue-500 border-blue-500 text-white flex items-center justify-center'
-                        : 'border-gray-300 dark:border-gray-600'
-                    }`}>
-                      {selectedBrands.some(item => item.id === brand.id) && (
-                        <Check className="w-4 h-4" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-medium text-gray-900 dark:text-white">
-                        {brand.brand_name}
-                        {shortcuts[brand.id] && (
-                          <span className="ml-2 px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs rounded-full">
-                            {shortcuts[brand.id]}
-                          </span>
+
+              <div className="p-6">
+                <div ref={brandListRef} className="max-h-96 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700">
+                  {(searchQuery.trim() === '' ? brands : filteredBrands).map((brand, index) => (
+                    <div
+                      id={`brand-item-${index}`}
+                      key={brand.id}
+                      onClick={() => toggleBrandSelection(brand)}
+                      onDoubleClick={() => handleBrandDoubleClick(brand)}
+                      className={`flex items-center w-full text-left px-4 py-3 cursor-pointer transition-colors ${
+                        selectedBrandIndex === index 
+                          ? 'bg-blue-50 dark:bg-blue-900/20' 
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                      }`}
+                    >
+                      <div className={`w-5 h-5 mr-3 flex-shrink-0 border rounded-md transition-colors ${
+                        selectedBrands.some(item => item.id === brand.id)
+                          ? 'bg-blue-500 border-blue-500 text-white'
+                          : 'border-gray-300 dark:border-gray-600'
+                      }`}>
+                        {selectedBrands.some(item => item.id === brand.id) && (
+                          <Check className="w-4 h-4 m-0.5" />
                         )}
                       </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
-                        {brand.item_code} - {brand.sizes} - ₹{brand.mrp} (Stock: {brand.closing_qty})
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-gray-900 dark:text-white truncate">
+                          {brand.brand_name}
+                          {shortcuts[brand.id] && (
+                            <span className="ml-2 px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs rounded-full">
+                              {shortcuts[brand.id]}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                          {brand.item_code} - {brand.sizes} - ₹{brand.mrp}
+                          <span className="ml-2 px-2 py-0.5 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-full text-xs">
+                            Stock: {brand.closing_qty}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 flex justify-between items-center">
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                  <p>Use arrow keys to navigate, Space to select/deselect, Double-click for quick select</p>
+                  ))}
                 </div>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => setSelectedBrands([])}
-                    className="px-3 py-1 text-sm text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-                  >
-                    Clear
-                  </button>
-                  <button 
-                    onClick={applyMultiSelection}
-                    disabled={selectedBrands.length === 0}
-                    className="px-3 py-1 text-sm text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Add {selectedBrands.length > 0 ? `(${selectedBrands.length})` : ''}
-                  </button>
+
+                <div className="mt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    <div className="flex flex-wrap gap-2">
+                      <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-md">↑↓ Navigate</span>
+                      <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-md">Space Select</span>
+                      <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-md">Double-click Quick Add</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-3 self-end sm:self-auto">
+                    <button 
+                      onClick={() => setSelectedBrands([])}
+                      className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
+                    >
+                      Clear All
+                    </button>
+                    <button 
+                      onClick={applyMultiSelection}
+                      disabled={selectedBrands.length === 0}
+                      className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors flex items-center gap-2"
+                    >
+                      <span>Add Selected</span>
+                      {selectedBrands.length > 0 && (
+                        <span className="px-1.5 py-0.5 bg-white/20 rounded-md text-xs">
+                          {selectedBrands.length}
+                        </span>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 } 

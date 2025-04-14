@@ -424,20 +424,20 @@ export default function TPSummary() {
   const handleEdit = async (tpId: number) => {
     try {
       setLoading(true);
-      
-      // Fetch TP details with brand information
-      const { data: tp, error: tpError } = await supabase
+
+      // Fetch TP details with items and brand details
+      const { data: tpData, error: tpError } = await supabase
         .from('transport_permits')
         .select(`
           id,
           tp_no,
           party_id,
           tp_date,
-          tp_items!inner (
+          tp_items:tp_items (
             id,
             brand_id,
             qty,
-            brands!inner (
+            brand:brands (
               id,
               brand_name,
               item_code,
@@ -448,45 +448,31 @@ export default function TPSummary() {
           )
         `)
         .eq('id', tpId)
-        .single();
+        .maybeSingle();
 
       if (tpError) throw tpError;
 
-      // Fetch shortcuts for the brands in the TP
-      const brandIds = tp.tp_items.map((item: any) => item.brand_id);
-      const { data: shortcuts, error: shortcutsError } = await supabase
-        .from('shortcuts')
-        .select('shortform, brand_id')
-        .in('brand_id', brandIds);
+      if (!tpData) {
+        throw new Error('TP not found');
+      }
 
-      if (shortcutsError) throw shortcutsError;
-
-      // Create a map of brand_id to shortform
-      const shortcutMap = new Map(shortcuts?.map(s => [s.brand_id, s.shortform]) || []);
-
-      // Transform the data and ensure brand information is properly mapped with shortcuts
+      // Transform the data
       const editTP: EditTP = {
-        id: tp.id,
-        tp_no: tp.tp_no,
-        party_id: tp.party_id,
-        tp_date: tp.tp_date,
-        items: tp.tp_items.map((item: any) => ({
+        id: tpData.id,
+        tp_no: tpData.tp_no,
+        party_id: tpData.party_id,
+        tp_date: tpData.tp_date,
+        items: tpData.tp_items.map((item: any) => ({
           id: item.id,
           brand_id: item.brand_id,
           qty: item.qty,
-          brand: {
-            ...item.brands,
-            shortform: shortcutMap.get(item.brand_id)
-          }
+          brand: item.brand
         }))
       };
 
-      console.log('Transformed TP data with shortcuts:', editTP); // Debug log
-
-      // First set the editingTP
       setEditingTP(editTP);
-      
-      // Then fetch parties and brands with shortcuts
+
+      // Fetch parties for the dropdown
       const [partiesResult] = await Promise.all([
         supabase.from('parties').select('*').order('party_name')
       ]);
@@ -494,11 +480,11 @@ export default function TPSummary() {
       if (partiesResult.error) throw partiesResult.error;
 
       setParties(partiesResult.data || []);
-      await fetchBrands(); // This will now fetch brands with shortcuts
+      await fetchBrands();
       setIsEditModalOpen(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching TP details:', error);
-      toast.error('Failed to fetch TP details');
+      toast.error(error.message || 'Failed to fetch TP details');
     } finally {
       setLoading(false);
     }
@@ -539,10 +525,9 @@ export default function TPSummary() {
           const { error: itemError } = await supabase
             .from('tp_items')
             .insert({
-              transport_permit_id: editingTP.id,
+              tp_id: editingTP.id,
               brand_id: item.brand_id,
-              qty: item.qty,
-              bar_id: selectedBar?.id
+              qty: item.qty
             });
 
           if (itemError) throw itemError;
@@ -553,9 +538,9 @@ export default function TPSummary() {
       setIsEditModalOpen(false);
       setEditingTP(null);
       fetchTPs();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating TP:', error);
-      toast.error('Failed to update TP');
+      toast.error(error.message || 'Failed to update TP');
     } finally {
       setLoading(false);
     }
