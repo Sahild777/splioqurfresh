@@ -96,6 +96,13 @@ export default function OpeningStock() {
       
       const initializeData = async () => {
         try {
+          if (!selectedBar) {
+            setBrands([]);
+            setOpeningStock([]);
+            setSavedOpeningStock([]);
+            return;
+          }
+
           setInitialLoading(true);
           setLoadingProgress(0);
 
