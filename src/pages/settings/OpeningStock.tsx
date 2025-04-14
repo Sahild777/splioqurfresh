@@ -44,7 +44,7 @@ interface SCMImportRow {
 }
 
 const ensureBarAccess = async (barId: string) => {
-  // Removed authentication check - always return true
+  // Always return true - no authentication required
   return true;
 };
 
