@@ -553,12 +553,6 @@ export default function DailySales() {
         return;
       }
 
-      // Get the current user's ID
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
-
       // If in edit mode, first delete existing sales for the date
       if (isEditMode) {
         const { error: deleteError } = await supabase
@@ -579,25 +573,25 @@ export default function DailySales() {
             sale_date: saleDate,
             brand_id: item.brand_id,
             qty: item.qty,
-            created_by: user.id,
             created_at: new Date().toISOString()
           }))
         );
-
       if (error) throw error;
 
-      toast.success('Sales saved successfully');
-      
-      if (isEditMode) {
-        // Return to the sales summary page after successful edit
-        navigate('/sales/summary');
-      } else {
-        // Reset form for new entry
-      setSaleItems([{ sr_no: 1, brand_id: null, brand_name: '', item_code: '', sizes: '', mrp: 0, qty: 0, available_stock: 0 }]);
-      setSelectedRowIndex(0);
-      // Refresh brands with updated stock
-      fetchBrandsWithStock();
+      // Update inventory stock for each sold item
+      for (const item of saleItems) {
+        const newStock = item.available_stock - item.qty;
+        await supabase
+          .from('inventory')
+          .update({ closing_qty: newStock })
+          .eq('bar_id', selectedBar?.id)
+          .eq('brand_id', item.brand_id)
+          .eq('date', saleDate);
       }
+
+      toast.success('Sales saved successfully');
+      // After saving, redirect to summary for both new and edit modes
+      navigate('/sales/summary');
     } catch (error: any) {
       toast.error('Failed to save sales');
       console.error('Error saving sales:', error);

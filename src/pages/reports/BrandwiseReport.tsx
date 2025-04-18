@@ -407,14 +407,20 @@ export default function BrandwiseReport() {
     try {
       setLoading(true);
 
-      // Calculate previous date
+      // Determine inventory date: for bar start date use that date, else previous day
       const currentDate = new Date(date);
-      const previousDate = new Date(currentDate);
-      previousDate.setDate(previousDate.getDate() - 1);
-      const previousDateStr = previousDate.toISOString().split('T')[0];
+      const barStartDate = selectedBar?.financial_year_start;
+      let inventoryDateStr: string;
+      if (date === barStartDate) {
+        inventoryDateStr = date;
+      } else {
+        const prev = new Date(currentDate);
+        prev.setDate(prev.getDate() - 1);
+        inventoryDateStr = prev.toISOString().split('T')[0];
+      }
 
-      // Fetch previous day's closing stock
-      const { data: previousDayData, error: previousDayError } = await supabase
+      // Fetch closing stock for the inventoryDateStr
+      const { data: inventoryData, error: inventoryError } = await supabase
         .from('inventory')
         .select(`
           brand_id,
@@ -428,12 +434,8 @@ export default function BrandwiseReport() {
           )
         `)
         .eq('bar_id', selectedBar?.id)
-        .eq('date', previousDateStr);
-
-      if (previousDayError) {
-        console.error('Previous day data error:', previousDayError);
-        throw previousDayError;
-      }
+        .eq('date', inventoryDateStr);
+      if (inventoryError) throw inventoryError;
 
       // Fetch received stock (TP entries) with category and TP numbers
       const { data: receivedData, error: receivedError } = await supabase
@@ -479,7 +481,7 @@ export default function BrandwiseReport() {
       }
 
       // Process and combine the data
-      const processedData: BrandReport[] = previousDayData.map((previous: any) => {
+      const processedData: BrandReport[] = inventoryData.map((previous: any) => {
         // Filter received items to only include those created on the selected date
         const received = receivedData?.filter((r: any) => {
           const tpDate = new Date(r.transport_permits?.tp_date);
