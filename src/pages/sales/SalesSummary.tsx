@@ -216,6 +216,7 @@ export default function SalesSummary() {
       }));
 
       setSales(transformedData);
+      console.log('Fetched sales after refresh:', transformedData);
     } catch (error: any) {
       toast.error('Failed to fetch sales');
       console.error('Error fetching sales:', error);
@@ -430,37 +431,45 @@ export default function SalesSummary() {
         toast.error('Please fill all required fields and ensure quantities are greater than 0');
         return;
       }
-
-      // Get the current user's ID
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error('User not authenticated');
+      if (!selectedBar?.id || !editModal.saleDate) {
+        toast.error('Bar or sale date is missing. Cannot save sales.');
+        return;
       }
 
-      // Delete existing sales for the date
+      // Delete existing sales for the date (defensive)
       const { error: deleteError } = await supabase
         .from('daily_sales')
         .delete()
-        .eq('bar_id', selectedBar?.id)
+        .eq('bar_id', selectedBar.id)
         .eq('sale_date', editModal.saleDate);
 
-      if (deleteError) throw deleteError;
+      if (deleteError) {
+        toast.error('Failed to delete old sales. Please try again.');
+        throw deleteError;
+      }
 
       // Save updated sales
       const { error } = await supabase
         .from('daily_sales')
         .insert(
           editModal.items.map(item => ({
-            bar_id: selectedBar?.id,
+            bar_id: selectedBar.id,
             sale_date: editModal.saleDate,
             brand_id: item.brand_id,
             qty: item.qty,
-            created_by: user.id,
+            // created_by field removed (no auth requirement)
             created_at: new Date().toISOString()
           }))
         );
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23505') {
+          toast.error('Duplicate sales detected for this date and brand. Please check your entries.');
+        } else {
+          toast.error('Failed to update sales.');
+        }
+        throw error;
+      }
 
       toast.success('Sales updated successfully');
       setEditModal({ isOpen: false, saleDate: null, items: [] });
@@ -468,28 +477,42 @@ export default function SalesSummary() {
 
     } catch (error: any) {
       console.error('Error updating sales:', error);
-      toast.error('Failed to update sales');
+      // toast already shown above
     } finally {
       setEditLoading(false);
     }
   };
+
 
   const handleAddNewSale = () => {
     navigate('/sales/daily');
   };
 
   const handleDeleteSalesByDate = async (saleDate: string) => {
+    if (!selectedBar?.id) {
+      toast.error('No bar selected. Cannot delete sales.');
+      return;
+    }
+    if (!saleDate) {
+      toast.error('No sale date provided. Cannot delete sales.');
+      return;
+    }
     if (!window.confirm(`Are you sure you want to delete all sales for ${format(new Date(saleDate), 'dd/MM/yyyy')}?`)) {
       return;
     }
 
     try {
-      const { error } = await supabase
+      console.log('Attempting to delete sales with:', { bar_id: selectedBar.id, sale_date: saleDate });
+      const { error, count } = await supabase
         .from('daily_sales')
-        .delete()
-        .eq('bar_id', selectedBar?.id)
+        .delete({ count: 'exact' })
+        .eq('bar_id', selectedBar.id)
         .eq('sale_date', saleDate);
 
+      console.log('Rows deleted:', count);
+      if (count === 0) {
+        toast.error('No sales were deleted. Check bar and date.');
+      }
       if (error) throw error;
 
       toast.success('Sales deleted successfully');
