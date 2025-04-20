@@ -453,34 +453,51 @@ export default function EnterTP() {
         tp_no: tpNo,
         party_id: selectedParty.id,
         tp_date: tpDate,
-        bar_id: selectedBar.id,
-        created_by: null  // Explicitly set to null since it's optional now
+        bar_id: selectedBar.id
       });
 
       // Insert TP without requiring authentication
-      const { data: insertedTP, error: insertError } = await supabase
+      // Use .select('*') and handle array response (Supabase may not return row if select policy is missing)
+      const { data: insertedTPs, error: insertError } = await supabase
         .from('transport_permits')
         .insert([
           {
             tp_no: tpNo,
             party_id: selectedParty.id,
             tp_date: tpDate,
-            bar_id: selectedBar.id,
+            bar_id: selectedBar.id
           }
         ])
-        .select()
-        .single();
+        .select('*');
 
+      // insertedTPs is an array if rows are returned, otherwise null
       if (insertError) {
         console.error('Error inserting transport permit:', insertError);
-        throw new Error(`Failed to create transport permit: ${insertError.message}`);
+        toast.error('Failed to save TP. Please try again.');
+        setIsLoading(false);
+        return;
+      }
+      let insertedTP = insertedTPs && insertedTPs.length > 0 ? insertedTPs[0] : null;
+      // If no TP returned, fetch it by tp_no and bar_id
+      if (!insertedTP) {
+        const { data: foundTPs, error: fetchTPError } = await supabase
+          .from('transport_permits')
+          .select('id')
+          .eq('tp_no', tpNo)
+          .eq('bar_id', selectedBar.id);
+        if (fetchTPError || !foundTPs || foundTPs.length === 0) {
+          toast.success('TP saved, but could not fetch new TP details.');
+          setIsLoading(false);
+          return;
+        }
+        insertedTP = foundTPs[0];
       }
 
-      // Prepare TP items
+      // Prepare TP items, ensure correct qty
       const tpItems = validItems.map(item => ({
-        tp_id: Number(insertedTP.id),
-        brand_id: Number(item.brand_id),
-        qty: Number(item.qty)
+        tp_id: insertedTP.id,
+        brand_id: item.brand_id,
+        qty: item.qty
       }));
 
       console.log('Saving TP items:', tpItems);
