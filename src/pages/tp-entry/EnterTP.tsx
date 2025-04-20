@@ -459,7 +459,6 @@ export default function EnterTP() {
             party_id: selectedParty.id,
             tp_date: tpDate,
             bar_id: selectedBar.id,
-            created_by: null  // Explicitly set to null since it's optional now
           }
         ])
         .select()
