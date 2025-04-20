@@ -442,6 +442,13 @@ export default function EnterTP() {
         return;
       }
 
+      if (!selectedParty || !selectedParty.id) {
+        console.error('Error: selectedParty is null or missing id when saving TP:', selectedParty);
+        toast.error('Please select a party before saving TP.');
+        setIsLoading(false);
+        return;
+      }
+
       console.log('Saving TP with data:', {
         tp_no: tpNo,
         party_id: selectedParty.id,
